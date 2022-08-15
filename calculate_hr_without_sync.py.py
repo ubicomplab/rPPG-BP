@@ -73,15 +73,14 @@ def detrend(signal, Lambda):
     filtered_signal = np.dot((H - np.linalg.inv(H + (Lambda ** 2) * np.dot(D.T, D))), signal)
     return filtered_signal
 
-def load_ground_truth(txt_path):
+def load_ground_truth(txt_path, session=120, fs=60):
     # read text file into pandas DataFrame
     header_list = ["time", "ekg", "ppg", 'resp', 'light']
     df = pd.read_csv(txt_path, sep=",", names=header_list)
-    idx_light = df.index[df['light'] == 'flash'].tolist()[0] # Find Light on Index
-    ppg = np.array(df['ppg'])[idx_light:]
-    ppg_sampled = scipy.signal.resample(ppg, ppg.shape[0]//2048*60) # resample PPG from 2048hz to 30hz
+    ppg = np.array(df['ppg'])[10:]
+    ppg_sampled = scipy.signal.resample(ppg, ppg.shape[0]//2048*fs) # resample PPG from 2048hz to 30hz
     ppg_sampled =  (ppg_sampled - np.mean(ppg_sampled)) / np.std(ppg_sampled)
-    return idx_light, ppg_sampled
+    return ppg_sampled[-1*fs*session:]
 
 
 def _crop_face_region(sample_image):
@@ -206,15 +205,15 @@ all_gt_path = sorted(glob.glob(onedrive_path + "\*.txt"))
 
 # Parameters
 FS = 60
-START_TIME = 7
-END_TIME = 9
+START_TIME = 20
+END_TIME = 22
 RESIZED_DIM = 256
 SIGNAL_LEN_CUTOFF = 200
 subject = 'P007a'
 video_path =  onedrive_path + f'\Videos\{subject}.mp4'
 gt_path = onedrive_path + f"\{subject}.txt"
 # # Load ground truth and find the annotated idx
-light_idx, sampled_ppg = load_ground_truth(gt_path)
+sampled_ppg = load_ground_truth(gt_path)
 # Load Video and crop face and palm
 selected_frame, selected_frame_idx = find_flash_frame(video_path, START_TIME, END_TIME, fs=FS)
 face_coordinates = _crop_face_region(selected_frame)
