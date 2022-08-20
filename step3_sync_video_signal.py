@@ -150,11 +150,8 @@ FS = 60
 LAST_DURATION = 125 # last 125 seconds
 RESIZED_DIM = 72
 CUTOFF = 5
-
 for video_path in all_video_path:
     video_basename = os.path.basename(video_path).split('.')[0]
-    if video_basename != 'P025a':
-        continue
     print('Processing: ', video_basename)
     # Load Video and crop face and palm
     selected_frame_coor = np.load(f'./cropping_coor/{video_basename}.npy', allow_pickle='TRUE').item()
