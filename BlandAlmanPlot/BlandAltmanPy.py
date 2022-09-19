@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 #%matplotlib inline
 
 class BlandAltman():
@@ -37,8 +38,9 @@ class BlandAltman():
         self.correlation = r[0,1]  # correlation coefficient
         diffs_std = diffs.std()    # 95% Confidence Intervals
         corr_std = np.sqrt(2*(diffs_std**2)) # if observations are averaged, used corrected standard deviation
+        sqrt_sample_size = math.sqrt(self.gold_std.shape[0])
         if averaged:
-            self.CI95 = [self.mean_error + 1.96 * corr_std, self.mean_error - 1.96 * corr_std]
+            self.CI95 = [self.mean_error + 1.96 * corr_std , self.mean_error - 1.96 * corr_std]
         else:
             self.CI95 = [self.mean_error + 1.96 * diffs_std, self.mean_error - 1.96 * diffs_std]
 
