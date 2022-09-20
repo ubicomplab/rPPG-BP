@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from scipy.stats import gaussian_kde
 #%matplotlib inline
 
 class BlandAltman():
@@ -65,6 +66,10 @@ class BlandAltman():
 
         return stats_dict
 
+    def rand_jitter(self, arr):
+        stdev = .01 * (max(arr) - min(arr))
+        return arr + np.random.randn(len(arr)) * stdev
+
     def scatter_plot(self,x_label='Gold Standard',y_label='New Measure',
                     figure_size=(4,4), show_legend=True,
                     the_title=' ',
@@ -85,17 +90,22 @@ class BlandAltman():
             matplotlib.rcParams['pdf.fonttype'] = 42
             matplotlib.rcParams['ps.fonttype'] = 42
 
+        self.gold_std = self.rand_jitter(self.gold_std)
+        self.new_measure = self.rand_jitter(self.new_measure)
+
         fig = plt.figure(figsize=figure_size)
         ax=fig.add_axes([0,0,1,1])
-        ax.scatter(self.gold_std,self.new_measure,label='Observations')
+        xy = np.vstack([self.gold_std,self.new_measure])
+        z = gaussian_kde(xy)(xy)
+        ax.scatter(self.gold_std,self.new_measure, c=z, s=50)
         x_vals = np.array(ax.get_xlim())
-        ax.plot(x_vals,x_vals,'--',color='black',label='Line of Slope = 1')
+        # ax.plot(x_vals,x_vals,'--',color='black', label='Line of Slope = 1')
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
         ax.set_title(the_title)
         ax.grid()
-        if show_legend:
-            ax.legend()
+        plt.xlim(40, 105)
+        plt.ylim(40, 105)
         plt.savefig(file_name,bbox_inches='tight')
 
     def difference_plot(self,x_label='Difference between methods',
@@ -122,7 +132,9 @@ class BlandAltman():
 
         fig = plt.figure(figsize=figure_size)
         ax = fig.add_axes([0,0,1,1])
-        ax.scatter(avgs,diffs,label='Observations')
+        xy = np.vstack([avgs,diffs])
+        z = gaussian_kde(xy)(xy)
+        ax.scatter(avgs,diffs, c=z, label='Observations')
         x_vals = np.array(ax.get_xlim())
         ax.axhline(self.mean_error,color='black',label='Mean Error')
         ax.axhline(self.CI95[0],color='black',linestyle='--',label='+95% Confidence Interval')
