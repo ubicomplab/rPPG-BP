@@ -32,6 +32,7 @@ class BlandAltman():
         # Calculate Bland-Altman statistics
         diffs = gold_std - new_measure
         self.mean_error = diffs.mean()
+        self.std_error = diffs.std()
         self.mean_absolute_error = diffs.abs().mean()
         self.mean_squared_error = (diffs ** 2).mean()
         self.root_mean_squared_error = np.sqrt((diffs**2).mean())
@@ -50,6 +51,7 @@ class BlandAltman():
         print("Mean absolute error = {}".format(round(self.mean_absolute_error,round_amount)))
         print("Mean squared error = {}".format(round(self.mean_squared_error,round_amount)))
         print("Root mean squared error = {}".format(round(self.root_mean_squared_error,round_amount)))
+        print("Standard deviation error = {}".format(round(self.std_error,round_amount)))
         print("Correlation = {}".format(round(self.correlation,round_amount)))
         print("+95% Confidence Interval = {}".format(round(self.CI95[0],round_amount)))
         print("-95% Confidence Interval = {}".format(round(self.CI95[1],round_amount)))
@@ -106,10 +108,10 @@ class BlandAltman():
         ax.grid()
         plt.xlim(40, 105)
         plt.ylim(40, 105)
-        plt.savefig(file_name,bbox_inches='tight')
+        plt.savefig(file_name,bbox_inches='tight', dpi=300)
 
-    def difference_plot(self,x_label='Difference between methods',
-                        y_label='Average of two methods',averaged=False,
+    def difference_plot(self,x_label='Difference between rPPG HR and ECG HR [bpm]',
+                        y_label='Average of rPPG HR and ECG HR [bpm]',averaged=False,
                         figure_size=(4,4),show_legend=True,
                         the_title='',file_name='BlandAltman_DifferencePlot.pdf',
                         is_journal=False):
@@ -142,7 +144,7 @@ class BlandAltman():
         ax.set_ylabel(x_label)
         ax.set_xlabel(y_label)
         ax.set_title(the_title)
-        if show_legend:
-            ax.legend()
+        # if show_legend:
+        #     ax.legend()
         ax.grid()
-        plt.savefig(file_name,bbox_inches='tight')
+        plt.savefig(file_name,bbox_inches='tight', dpi=100)
