@@ -1,15 +1,11 @@
 import numpy as np
+import pandas as pd
+import os
+import glob
+import scipy
 import scipy.io
 from matplotlib import pyplot as plt
-import glob
-from scipy.signal import butter
-import scipy
-from hrvanalysis import remove_outliers, remove_ectopic_beats, interpolate_nan_values
-from scipy import stats
-import os
-from scipy.sparse import spdiags
-import pandas as pd
-import math
+from hrvanalysis import remove_ectopic_beats, interpolate_nan_values
 
 
 def remove_artifact(ppg_signal):
@@ -110,11 +106,13 @@ def calculate_plot_correlation(feature1, feature2, fig, title):
 
 if __name__ == "__main__":
 
-    save_wave_fig = False
+    save_wave_fig = True
 
-    all_mat_folder = "/gscratch/ubicomp/cm74/clinical_data/ProcessedDataNoVideo/*.mat"
+    # all_mat_folder = "/gscratch/ubicomp/cm74/clinical_data/ProcessedDataNoVideo/*.mat"
+    # all_mat_folder = "/gscratch/ubicomp/xliu0/rppg_clinical_study/tscan_ppg/*.mat"
+    all_mat_folder = "/gscratch/ubicomp/xliu0/rppg_clinical_study/pos_ppg/*.mat"
     bp_csv_path = "/gscratch/ubicomp/cm74/clinical_data/BPData_header.csv"
-    figure_savepath = "/gscratch/ubicomp/cm74/bp/bp_preprocess/test_figure_plots"
+    figure_savepath = "/gscratch/ubicomp/cm74/bp/bp_preprocess/pos_figure_plots"
     all_mat_path = sorted(glob.glob(all_mat_folder))
     bp_df = pd.read_csv(bp_csv_path)
 
@@ -194,10 +192,11 @@ if __name__ == "__main__":
         axs[3, 1].plot(face_t[troughs], face_ppg_norm[troughs], "go")
 
         ### Remove Ectopic Beats
-        interpolated_nn_intervals = remove_ectopic(peaks)
-        axs[4, 1].plot(peaks[1:], np.array(interpolated_nn_intervals) / FS)
-        axs[4, 1].set_title("IBIs")
-        axs[4, 0].plot(finger_peaks[1:], np.diff(finger_peaks) / FS)
+        if len(peaks) > 1:
+            interpolated_nn_intervals = remove_ectopic(peaks)
+            axs[4, 1].plot(peaks[1:], np.array(interpolated_nn_intervals) / FS)
+            axs[4, 1].set_title("IBIs")
+            axs[4, 0].plot(finger_peaks[1:], np.diff(finger_peaks) / FS)
         
         ### Pulse Segmentation
         # tdia = 0
@@ -267,7 +266,7 @@ if __name__ == "__main__":
 
     axs2[4, 1] = calculate_plot_correlation(wgt, bp_dia, axs2[4, 1], "WEIGHT")
 
-    axs2[4, 2] = calculate_plot_correlation(hgt, bp_dia, axs2[4, 1], "HEIGHT")
+    axs2[4, 2] = calculate_plot_correlation(hgt, bp_dia, axs2[4, 2], "HEIGHT")
 
     w_h = np.array(wgt) / np.array(hgt)
     axs2[4, 3] = calculate_plot_correlation(w_h, bp_dia, axs2[4, 3], "WEIGHT / HEIGHT")
