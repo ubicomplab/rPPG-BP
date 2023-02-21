@@ -1,9 +1,9 @@
 {
     "prefix": "ppg_bp",
     "manual_seed": 6666,
-    "bp_csv_path": "/gscratch/ubicomp/cm74/clinical_data/BPData_230103_demograph.csv",
-    "train_dataset_path": "/gscratch/ubicomp/cm74/bp/ppg_bp/uwppg_bp_face_manual_train_fold_1.txt",
-    "val_dataset_path": "/gscratch/ubicomp/cm74/bp/ppg_bp/uwppg_bp_face_manual_val_fold_1.txt",
+    "bp_csv_path": "./BPData_230103_demograph.csv",
+    "train_dataset_path": "./data_list/uwppg_bp_face_manual_train_fold_1.txt",
+    "val_dataset_path": "./data_list/uwppg_bp_face_manual_val_fold_1.txt",
     "batch_size": 16,
     "num_workers": 16,
     "chunk_amount": 5,
@@ -23,6 +23,6 @@
     "scheduler_milestones": [50, 200, 500],
     "scheduler_gamma": 0.5,
     "steps_val": 20,
-    "output_dir": "output/20230216_v3_fold1",
+    "output_dir": "output/20230220_v1_fold1",
     "dist": true
 }

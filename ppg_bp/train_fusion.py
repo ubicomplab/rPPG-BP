@@ -174,7 +174,7 @@ class Trainer:
             self.config["tb_writer"] = SummaryWriter(log_dir=tb_dir, flush_secs=60)
 
         step_start = 0
-        epochs_max = 6
+        epochs_max = 50
         current_step = step_start
         for epoch in range(epoch_start, epochs_max):
             for i, batch in enumerate(self.train_loader):

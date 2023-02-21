@@ -136,43 +136,42 @@ class UWBP_val_manual_demo(UWBP_train_manual_demo):
         data = list()
         for i in range(len(mat_data)):
             chunk_ori = mat_data[i]
+            mat_pid = mat_path.split("/")[-1].split(".")[0][:-1]
+            session = mat_path.split("/")[-1].split(".")[0][-1]
+            df = self.bp_gt[self.bp_gt["PID"] == mat_pid]
+
+            age = (df["age"].values[0] - 34) / (96 - 34) # Now the min age is 34 years old and oldest person is 96
+            bmi = (df["bmi"].values[0] - 17) / (41 - 17) # Now the min bmi is 17.327 and the max bmi is 40.88
+            gender = df["gender"].values[0]
+            if gender == "M":
+                gender = 0
+            else:
+                gender = 1
+            
+            age_array = np.zeros(self.demo_shape, dtype=np.float32)
+            bmi_array = np.zeros(self.demo_shape, dtype=np.float32)
+            gender_array = np.zeros(self.demo_shape, dtype=np.float32)
+            age_array[:] = age
+            bmi_array[:] = bmi
+            gender_array[:] = gender
+            # bp_sys = max(min((df.iloc[0, 4] - 100) / (180 - 100), 1), 0)
+            # bp_dia = max(min((df.iloc[0, 8] - 55) / (100 - 55), 1), 0)
+            if session == "a":
+                bp_sys = (df.iloc[0, 1] + df.iloc[0, 2]) / 2
+                bp_dia = (df.iloc[0, 5] + df.iloc[0, 6]) / 2
+                bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
+                bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
+            else:
+                bp_sys = (df.iloc[0, 2] + df.iloc[0, 3]) / 2
+                bp_dia = (df.iloc[0, 6] + df.iloc[0, 7]) / 2
+                bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
+                bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
             if len(chunk_ori) == 5:
                 temp_chunk = chunk_ori
                 chunk, pos = self._concat_chunks(temp_chunk)
                 chunk[pos:] = np.mean(chunk[:pos])
                 chunk_filt = filter_ppg_signal(chunk, self.LPF, self.HPF, self.FS)
                 chunk_filt_norm = normalize_min_max(chunk_filt)
-
-                mat_pid = mat_path.split("/")[-1].split(".")[0][:-1]
-                session = mat_path.split("/")[-1].split(".")[0][-1]
-                df = self.bp_gt[self.bp_gt["PID"] == mat_pid]
-
-                age = (df["age"].values[0] - 34) / (96 - 34) # Now the min age is 34 years old and oldest person is 96
-                bmi = (df["bmi"].values[0] - 17) / (41 - 17) # Now the min bmi is 17.327 and the max bmi is 40.88
-                gender = df["gender"].values[0]
-                if gender == "M":
-                    gender = 0
-                else:
-                    gender = 1
-                
-                age_array = np.zeros(self.demo_shape, dtype=np.float32)
-                bmi_array = np.zeros(self.demo_shape, dtype=np.float32)
-                gender_array = np.zeros(self.demo_shape, dtype=np.float32)
-                age_array[:] = age
-                bmi_array[:] = bmi
-                gender_array[:] = gender
-                # bp_sys = max(min((df.iloc[0, 4] - 100) / (180 - 100), 1), 0)
-                # bp_dia = max(min((df.iloc[0, 8] - 55) / (100 - 55), 1), 0)
-                if session == "a":
-                    bp_sys = (df.iloc[0, 1] + df.iloc[0, 2]) / 2
-                    bp_dia = (df.iloc[0, 5] + df.iloc[0, 6]) / 2
-                    bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                    bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
-                else:
-                    bp_sys = (df.iloc[0, 2] + df.iloc[0, 3]) / 2
-                    bp_dia = (df.iloc[0, 6] + df.iloc[0, 7]) / 2
-                    bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                    bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
                 
                 if self.derivative:
                     chunk_filt_norm_fd = np.diff(chunk_filt_norm)
@@ -210,37 +209,6 @@ class UWBP_val_manual_demo(UWBP_train_manual_demo):
                     chunk_filt = filter_ppg_signal(chunk, self.LPF, self.HPF, self.FS)
                     chunk_filt_norm = normalize_min_max(chunk_filt)
 
-                    mat_pid = mat_path.split("/")[-1].split(".")[0][:-1]
-                    session = mat_path.split("/")[-1].split(".")[0][-1]
-                    df = self.bp_gt[self.bp_gt["PID"] == mat_pid]
-
-                    age = (df["age"].values[0] - 34) / (96 - 34) # Now the min age is 34 years old and oldest person is 96
-                    bmi = (df["bmi"].values[0] - 17) / (41 - 17) # Now the min bmi is 17.327 and the max bmi is 40.88
-                    gender = df["gender"].values[0]
-                    if gender == "M":
-                        gender = 0
-                    else:
-                        gender = 1
-                    
-                    age_array = np.zeros(self.demo_shape, dtype=np.float32)
-                    bmi_array = np.zeros(self.demo_shape, dtype=np.float32)
-                    gender_array = np.zeros(self.demo_shape, dtype=np.float32)
-                    age_array[:] = age
-                    bmi_array[:] = bmi
-                    gender_array[:] = gender
-                    # bp_sys = max(min((df.iloc[0, 4] - 100) / (180 - 100), 1), 0)
-                    # bp_dia = max(min((df.iloc[0, 8] - 55) / (100 - 55), 1), 0)
-                    if session == "a":
-                        bp_sys = (df.iloc[0, 1] + df.iloc[0, 2]) / 2
-                        bp_dia = (df.iloc[0, 5] + df.iloc[0, 6]) / 2
-                        bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                        bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
-                    else:
-                        bp_sys = (df.iloc[0, 2] + df.iloc[0, 3]) / 2
-                        bp_dia = (df.iloc[0, 6] + df.iloc[0, 7]) / 2
-                        bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                        bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
-                    
                     if self.derivative:
                         chunk_filt_norm_fd = np.diff(chunk_filt_norm)
                         chunk_filt_norm_fd = np.insert(chunk_filt_norm_fd, 0, 0)
@@ -267,9 +235,7 @@ class UWBP_val_manual_demo(UWBP_train_manual_demo):
                         }
                     
                     data.append(item)
-        # if len(data) == 0:
-        #     print(mat_path)
-        # print(len(data))
+
         return data
 
 
@@ -298,43 +264,43 @@ class UWBP_test_manual_demo(UWBP_train_manual_demo):
         data = list()
         for i in range(len(mat_data)):
             chunk_ori = mat_data[i]
+            mat_pid = mat_path.split("/")[-1].split(".")[0][:-1]
+            session = mat_path.split("/")[-1].split(".")[0][-1]
+            df = self.bp_gt[self.bp_gt["PID"] == mat_pid]
+
+            age = (df["age"].values[0] - 34) / (96 - 34) # Now the min age is 34 years old and oldest person is 96
+            bmi = (df["bmi"].values[0] - 17) / (41 - 17) # Now the min bmi is 17.327 and the max bmi is 40.88
+            gender = df["gender"].values[0]
+            if gender == "M":
+                gender = 0
+            else:
+                gender = 1
+            
+            age_array = np.zeros(self.demo_shape, dtype=np.float32)
+            bmi_array = np.zeros(self.demo_shape, dtype=np.float32)
+            gender_array = np.zeros(self.demo_shape, dtype=np.float32)
+            age_array[:] = age
+            bmi_array[:] = bmi
+            gender_array[:] = gender
+            # bp_sys = max(min((df.iloc[0, 4] - 100) / (180 - 100), 1), 0)
+            # bp_dia = max(min((df.iloc[0, 8] - 55) / (100 - 55), 1), 0)
+            if session == "a":
+                bp_sys = (df.iloc[0, 1] + df.iloc[0, 2]) / 2
+                bp_dia = (df.iloc[0, 5] + df.iloc[0, 6]) / 2
+                bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
+                bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
+            else:
+                bp_sys = (df.iloc[0, 2] + df.iloc[0, 3]) / 2
+                bp_dia = (df.iloc[0, 6] + df.iloc[0, 7]) / 2
+                bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
+                bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
+        
             if len(chunk_ori) == 5:
                 temp_chunk = chunk_ori
                 chunk, pos = self._concat_chunks(temp_chunk)
                 chunk[pos:] = np.mean(chunk[:pos])
                 chunk_filt = filter_ppg_signal(chunk, self.LPF, self.HPF, self.FS)
                 chunk_filt_norm = normalize_min_max(chunk_filt)
-
-                mat_pid = mat_path.split("/")[-1].split(".")[0][:-1]
-                session = mat_path.split("/")[-1].split(".")[0][-1]
-                df = self.bp_gt[self.bp_gt["PID"] == mat_pid]
-
-                age = (df["age"].values[0] - 34) / (96 - 34) # Now the min age is 34 years old and oldest person is 96
-                bmi = (df["bmi"].values[0] - 17) / (41 - 17) # Now the min bmi is 17.327 and the max bmi is 40.88
-                gender = df["gender"].values[0]
-                if gender == "M":
-                    gender = 0
-                else:
-                    gender = 1
-                
-                age_array = np.zeros(self.demo_shape, dtype=np.float32)
-                bmi_array = np.zeros(self.demo_shape, dtype=np.float32)
-                gender_array = np.zeros(self.demo_shape, dtype=np.float32)
-                age_array[:] = age
-                bmi_array[:] = bmi
-                gender_array[:] = gender
-                # bp_sys = max(min((df.iloc[0, 4] - 100) / (180 - 100), 1), 0)
-                # bp_dia = max(min((df.iloc[0, 8] - 55) / (100 - 55), 1), 0)
-                if session == "a":
-                    bp_sys = (df.iloc[0, 1] + df.iloc[0, 2]) / 2
-                    bp_dia = (df.iloc[0, 5] + df.iloc[0, 6]) / 2
-                    bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                    bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
-                else:
-                    bp_sys = (df.iloc[0, 2] + df.iloc[0, 3]) / 2
-                    bp_dia = (df.iloc[0, 6] + df.iloc[0, 7]) / 2
-                    bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                    bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
                 
                 if self.derivative:
                     chunk_filt_norm_fd = np.diff(chunk_filt_norm)
@@ -371,37 +337,6 @@ class UWBP_test_manual_demo(UWBP_train_manual_demo):
                     chunk[pos:] = np.mean(chunk[:pos])
                     chunk_filt = filter_ppg_signal(chunk, self.LPF, self.HPF, self.FS)
                     chunk_filt_norm = normalize_min_max(chunk_filt)
-
-                    mat_pid = mat_path.split("/")[-1].split(".")[0][:-1]
-                    session = mat_path.split("/")[-1].split(".")[0][-1]
-                    df = self.bp_gt[self.bp_gt["PID"] == mat_pid]
-
-                    age = (df["age"].values[0] - 34) / (96 - 34) # Now the min age is 34 years old and oldest person is 96
-                    bmi = (df["bmi"].values[0] - 17) / (41 - 17) # Now the min bmi is 17.327 and the max bmi is 40.88
-                    gender = df["gender"].values[0]
-                    if gender == "M":
-                        gender = 0
-                    else:
-                        gender = 1
-                    
-                    age_array = np.zeros(self.demo_shape, dtype=np.float32)
-                    bmi_array = np.zeros(self.demo_shape, dtype=np.float32)
-                    gender_array = np.zeros(self.demo_shape, dtype=np.float32)
-                    age_array[:] = age
-                    bmi_array[:] = bmi
-                    gender_array[:] = gender
-                    # bp_sys = max(min((df.iloc[0, 4] - 100) / (180 - 100), 1), 0)
-                    # bp_dia = max(min((df.iloc[0, 8] - 55) / (100 - 55), 1), 0)
-                    if session == "a":
-                        bp_sys = (df.iloc[0, 1] + df.iloc[0, 2]) / 2
-                        bp_dia = (df.iloc[0, 5] + df.iloc[0, 6]) / 2
-                        bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                        bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
-                    else:
-                        bp_sys = (df.iloc[0, 2] + df.iloc[0, 3]) / 2
-                        bp_dia = (df.iloc[0, 6] + df.iloc[0, 7]) / 2
-                        bp_sys = float(max(min((bp_sys - 100) / (180 - 100), 1), 0))
-                        bp_dia = float(max(min((bp_dia - 55) / (100 - 55), 1), 0))
                     
                     if self.derivative:
                         chunk_filt_norm_fd = np.diff(chunk_filt_norm)
@@ -429,7 +364,5 @@ class UWBP_test_manual_demo(UWBP_train_manual_demo):
                         }
                     
                     data.append(item)
-        # if len(data) == 0:
-        #     print(mat_path)
-        # print(len(data))
+
         return data
