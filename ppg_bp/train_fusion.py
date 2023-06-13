@@ -1,14 +1,21 @@
-import os, sys, time, random, argparse
+import argparse
+import json
+import os
+import random
+import shutil
+import sys
+import time
+
 import numpy as np
 import torch
-import shutil
-import json
 import torch.multiprocessing as mp
-from torch.utils.data.distributed import DistributedSampler
-from torch.nn.parallel import DistributedDataParallel as DDP
+from dataset import (UWBP_train_manual_demo,
+                     UWBP_val_manual_demo)
+from model import M5_fusion_transformer
+                   
 from torch.nn import functional as F
-from model import M5, M5_fusion_conv
-from dataset import UWBP_train_manual_demo, UWBP_val_manual_demo
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data.distributed import DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
 
 ### python -m torch.distributed.launch --nproc_per_node=2 --master_port=45678 train_pre.py -c configs/default.yaml
@@ -37,8 +44,7 @@ class Trainer:
         
         self.train_set = UWBP_train_manual_demo(self.config)
         self.val_set = UWBP_val_manual_demo(self.config)
-        # self.train_set = UWBP_train_face_palm_skew(self.config)
-        # self.val_set = UWBP_val_face_palm_skew(self.config)
+
         if self.config["dist"]:
             self.train_sampler = DistributedSampler(self.train_set, shuffle=True, drop_last=True)
             self.train_loader = torch.utils.data.DataLoader(self.train_set, 
@@ -68,14 +74,15 @@ class Trainer:
         log_file_path = os.path.join(self.config["output_dir"], "train_log.txt")
         with open(log_file_path, "a") as f:
             f.write(log_str)
-    
+
     def init_model(self):
         if self.config["derivative_input"]:
-            # self.model = M5(n_input=3, n_output=2)
-            self.model = M5_fusion_conv(n_input=3, n_output=2)
+            self.model = M5_fusion_transformer(n_input=1, n_output=2)
         else:
             # self.model = M5_fusion(n_input=1, n_output=2)
-            self.model = M5_fusion_conv(n_input=1, n_output=2)
+            # self.model = M5_fusion_conv(n_input=1, n_output=2)
+            self.model = M5_fusion_transformer(n_input=1, n_output=2)
+            # self.model = M5_residual_fusion_transformer(n_input=1, n_output=2)
             # self.model = FC_naive(n_input=2)
 
     def init_loss_and_optimizer(self):
@@ -96,21 +103,24 @@ class Trainer:
         # gender = batch["gender"].to(self.device).to(torch.float32)
 
         bp_predict = self.model(chunk, age, bmi)
+        # bp_predict = self.model(chunk)
         # bp_predict = self.model(age, bmi)
-        l1_loss = self.l2_criterion(bp_predict, bp)
-
-        loss = l1_loss
+        bp_weight = bp.clone()
+        bp_weight = torch.reshape(torch.where((bp_weight[:,:,0] > 0.55) | (bp_weight[:,:,0] < 0.2), 2.0, 1.0), (bp_weight.shape[0], 1, 1))
+        # print(bp_weight)
+        l2_loss = bp_weight * self.l2_criterion(bp_predict, bp)
+        loss = l2_loss.mean()
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
         if self.rank == 0:
-            sys.stdout.write(f"\r[{epoch},{step}] loss {loss.item():.4f} l2 loss {l1_loss.item():.4f}")
+            sys.stdout.write(f"\r[{epoch},{step}] loss {loss.item():.4f} l2 loss {loss.item():.4f}")
             sys.stdout.flush()
         if "tb_writer" in self.config and self.config["tb_writer"] is not None:
             self.config["tb_writer"].add_scalar("loss/train", loss, step)
-            self.config["tb_writer"].add_scalar("L2 loss/train", l1_loss, step)
+            self.config["tb_writer"].add_scalar("L2 loss/train", loss, step)
 
 
     def train(self):
@@ -156,12 +166,13 @@ class Trainer:
         # load pretrained weights if needed
         if self.config["network"]["pretrained"] is not None:
             snapshot_path = self.config["network"]["pretrained"]
+            self.model.module.load_state_dict(torch.load(snapshot_path))
+            print("Loaded pretrained model.")
         else:
             snapshot_path = init_snapshot_path
+            self.model.load_state_dict(torch.load(snapshot_path))
             print("Train from scratch")
-        self.model.load_state_dict(torch.load(snapshot_path))
-        # epoch_start, step_start, _ = load_checkpoint(snapshot_path, self.model, self.device)
-        print("Loaded pretrained model.")
+
         
         # init
         if self.rank == 0:
@@ -174,7 +185,7 @@ class Trainer:
             self.config["tb_writer"] = SummaryWriter(log_dir=tb_dir, flush_secs=60)
 
         step_start = 0
-        epochs_max = 50
+        epochs_max = 150
         current_step = step_start
         for epoch in range(epoch_start, epochs_max):
             for i, batch in enumerate(self.train_loader):
@@ -215,7 +226,7 @@ class Trainer:
                 # gender = batch["gender"].to(self.device).to(torch.float32)
                 # bp_predict = self.model(age, bmi)
                 bp_predict = self.model(chunks, age, bmi)
-                # bp_predict = model(chunks)
+                # bp_predict = self.model(chunks)
                 l2_loss = self.l2_criterion(bp_predict, bp).item()
                 temp_loss.append(l2_loss)
                 # tmp_by_sys_gt.append(torch.squeeze(bp).to("cpu").detach().numpy())

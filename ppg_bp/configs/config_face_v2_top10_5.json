@@ -1,0 +1,28 @@
+{
+    "prefix": "ppg_bp",
+    "manual_seed": 6666,
+    "bp_csv_path": "/gscratch/ubicomp/cm74/clinical_data/BPData_230223_demograph.csv",
+    "train_dataset_path": "./data_list/uwppg_bp_face_v2_0508_top10_t_8_train_fold_5.txt",
+    "val_dataset_path": "./data_list/uwppg_bp_face_v2_0508_top10_t_8_val_fold_5.txt",
+    "batch_size": 32,
+    "num_workers": 16,
+    "chunk_amount": 5,
+    "chunk_length": 512,
+    "filter_lpf": 0.7,
+    "filter_hpf": 16,
+    "frequency_sample": 60,
+    "frequency_field": false,
+    "derivative_input": false,
+    "network": {
+        "scale": 1,
+        "pretrained": null
+    },
+    "loss": "",
+    "gpus": [0, 1],
+    "learning_rate": 0.001,
+    "scheduler_milestones": [50, 100, 200, 500],
+    "scheduler_gamma": 0.5,
+    "steps_val": 10,
+    "output_dir": "output/20230612_v1_face_top10_fold5",
+    "dist": true
+}

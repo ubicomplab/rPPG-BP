@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from model_transformer import SimpleViT
 
 
 class M5(nn.Module):
@@ -77,6 +78,49 @@ class M5_fusion_conv(nn.Module):
         x = F.avg_pool1d(x, x.shape[-1])
         x = x.permute(0, 2, 1)
         x = self.fc1(x)
+        return x
+
+
+class M5_fusion_transformer(nn.Module):
+    def __init__(self, n_input=1, n_output=2, stride=1, n_channel=32):
+        super().__init__()
+        # self.conv1 = nn.Conv1d(n_input, n_channel, kernel_size=9, stride=stride)
+        self.conv1 = nn.Conv1d(n_input, n_channel, kernel_size=7, stride=stride, padding='same', padding_mode="replicate")
+        # self.conv1 = nn.Conv1d(n_input, n_channel, kernel_size=63, stride=stride)
+        self.bn1 = nn.BatchNorm1d(n_channel)
+        # self.pool1 = nn.MaxPool1d(4)
+        self.conv2 = nn.Conv1d(n_channel, n_channel, kernel_size=5, padding='same', padding_mode="replicate")
+        self.bn2 = nn.BatchNorm1d(n_channel)
+        # self.pool2 = nn.MaxPool1d(2)
+        self.pool2 = nn.AvgPool1d(2)
+        self.conv3 = nn.Conv1d(n_channel, 2 * n_channel, kernel_size=3, padding='same', padding_mode="replicate")
+        self.bn3 = nn.BatchNorm1d(2 * n_channel)
+        # self.pool3 = nn.MaxPool1d(2)
+        self.pool3 = nn.AvgPool1d(2)
+        self.conv4 = nn.Conv1d(2 * n_channel + 2, 2 * n_channel, kernel_size=3, padding='same', padding_mode="replicate")
+        self.bn4 = nn.BatchNorm1d(2 * n_channel)
+        self.conv5 = nn.Conv1d(2 * n_channel, n_channel, kernel_size=3, padding='same', padding_mode="replicate")
+        self.bn5 = nn.BatchNorm1d(n_channel)
+        self.vit = SimpleViT(seq_len=128, patch_size=16, num_classes=n_output, dim=512, depth=6, heads=8, mlp_dim=64, channels=32)
+        # self.vit = SimpleViT(seq_len=96, patch_size=16, num_classes=n_output, dim=512, depth=6, heads=8, mlp_dim=64, channels=32)
+
+    def forward(self, x, age, bmi):
+        x = self.conv1(x)
+        x = F.relu(self.bn1(x))
+        # x = self.pool1(x)
+        x = self.conv2(x)
+        x = F.relu(self.bn2(x))
+        x = self.pool2(x)
+        x = self.conv3(x)
+        x = F.relu(self.bn3(x))
+        x = self.pool3(x)
+        fusion = torch.concat((x, age, bmi), axis=1)
+        x = self.conv4(fusion)
+        x = F.relu(self.bn4(x))
+        x = self.conv5(x)
+        x = F.relu(self.bn5(x))
+        x = self.vit(x)
+        x = x.reshape((x.shape[0], 1, x.shape[1]))
         return x
 
 
