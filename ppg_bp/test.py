@@ -248,10 +248,6 @@ if __name__ == "__main__":
     # dia_var, dia_mean = torch.var_mean(torch.tensor(bp_dia_pred) - torch.tensor(bp_dia_gt))
     sys_var, sys_mean = torch.var_mean((torch.tensor(bp_sys_pred) - torch.tensor(bp_sys_gt)) * (sys_max - sys_min))
     dia_var, dia_mean = torch.var_mean((torch.tensor(bp_dia_pred) - torch.tensor(bp_dia_gt)) * (dia_max - dia_min))
-    # sys_mmhg = sys_mean.to("cpu").numpy() * (sys_max - sys_min) + sys_min
-    # dia_mmhg = dia_mean.to("cpu").numpy() * (dia_max - dia_min) + dia_min
-    # sys_mmhg_std = np.sqrt(sys_var.to("cpu").numpy()) * (sys_max - sys_min) + sys_min
-    # dia_mmhg_std = np.sqrt(dia_var.to("cpu").numpy()) * (dia_max - dia_min) + dia_min
     sys_mmhg = sys_mean.to("cpu").numpy()
     dia_mmhg = dia_mean.to("cpu").numpy()
     sys_mmhg_std = np.sqrt(sys_var.to("cpu").numpy())
