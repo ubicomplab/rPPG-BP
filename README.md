@@ -5,7 +5,7 @@ We use rPPG-Toolbox setup as our experiment enviroment in the paper.
 To setup the enviroment, you can follow the instructions in the '<rPPG-Toolbox Github Repo>' : <https://github.com/ubicomplab/rPPG-Toolbox>
 ### Reproducing the results
 To reproduce our results, 
-First, go to the `ppg_bp` folder.
+First, go to the `cd ./ppg_bp` folder.
 
 Set configurations in the `preprocess.sh` script 
 
