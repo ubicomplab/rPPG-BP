@@ -1,1 +1,0 @@
-val loss: 0.0415 sys pearson corr 0.5013 dia pearson corr 0.1696 
