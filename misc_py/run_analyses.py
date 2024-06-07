@@ -13,8 +13,10 @@ def remove_artifact(ppg_signal):
     ppg_signal_mean = np.mean(ppg_signal)
     ppg_signal_std = np.std(ppg_signal[:200])
     ### TODO: Xin replaces the value with the mean; Danial replaces the value with 0
-    ppg_signal = np.where(ppg_signal < ppg_signal_mean + 3 * ppg_signal_std, ppg_signal, 0)
-    ppg_signal = np.where(ppg_signal > ppg_signal_mean - 3 * ppg_signal_std, ppg_signal, 0)
+    # ppg_signal = np.where(ppg_signal < ppg_signal_mean + 3 * ppg_signal_std, ppg_signal, 0)
+    # ppg_signal = np.where(ppg_signal > ppg_signal_mean - 3 * ppg_signal_std, ppg_signal, 0)
+    ppg_signal = np.where(ppg_signal < ppg_signal_mean + 3 * ppg_signal_std, ppg_signal, ppg_signal_mean)
+    ppg_signal = np.where(ppg_signal > ppg_signal_mean - 3 * ppg_signal_std, ppg_signal, ppg_signal_mean)
 
     return ppg_signal
 
@@ -47,15 +49,17 @@ def pulse_segmentation(ppg, peaks, peak_no, FS, tdia=0):
     f = list()
     # peak_no is peak number
     if (((peaks[peak_no + 1] - peaks[peak_no]) / FS) > 1.5) or (((peaks[peak_no + 1] - peaks[peak_no]) / FS) < 0.5):
-        return False
+        return f, np.zeros((1,1))
     
     ppg_chunk = 1 - ppg[peaks[peak_no] : peaks[peak_no + 1] + 1]
-    
+    # ppg_chunk = ppg[peaks[peak_no] : peaks[peak_no + 1] + 1]
     # First deriv of ppg
+    ppg_chunk_return = ppg_chunk.copy()
     ppg_chunk_fd = np.diff(ppg_chunk)
     
-    # tmp_pos = np.asarray([(i / FS) for i in range(1, len(ppg_chunk))])
-    # axs[5, 1].plot(tmp_pos,  tmp_ppg_fd, "r")
+    tmp_pos = np.asarray([(i / FS) for i in range(1, len(ppg_chunk))])
+    
+    axs[5, 1].plot(tmp_pos,  ppg_chunk_fd, "r")
     # Second deriv of ppg
     ppg_chunk_sd = np.diff(ppg_chunk_fd)
     ppg_chunk_sd_peaks, _ = scipy.signal.find_peaks(ppg_chunk_sd)
@@ -89,30 +93,46 @@ def pulse_segmentation(ppg, peaks, peak_no, FS, tdia=0):
     # f7 => tdia - td
     f.append(len(ppg_chunk) / FS - td / FS)
 
-    return f
+    return f, ppg_chunk_return
 
 def calculate_plot_correlation(feature1, feature2, fig, title):
 
-    fig.scatter(temp_feature[temp_index],  bp_sys[temp_index])
+    fig.scatter(feature1,  feature2)
     # r_coef = np.corrcoef(np.transpose(feature1), np.transpose(feature2))
     # _, p_values = scipy.stats.pearsonr(temp_feature[temp_index], bp_sys[temp_index])
     slope, intercept, r_coef, p_values, se = scipy.stats.linregress(np.transpose(feature1), np.transpose(feature2))
     # fig.set_title(title + ": r: " + str(r_coef[0, 1]) + ", p: " + str(p_values))
-    fig.set_title(feature_names[i] + ": r: " + str(r_coef)[:6] + ", p: " + str(p_values)[:6])
+    fig.set_title(title + ": r: " + str(r_coef)[:6] + ", p: " + str(p_values)[:6])
     fig.set_box_aspect(1)
 
     return fig
 
+def stat_ppg_chunk(ppg_chunks):
+    
+    # temp = np.array(ppg_chunks)
+    max_len = max(len(x) for x in ppg_chunks)
+    ppg_chunks_mat = np.zeros((len(ppg_chunks), max_len))
+    for i in range(len(ppg_chunks)):
+        ppg_chunks_mat[i, :len(ppg_chunks[i])] = ppg_chunks[i]
+
+    template_mean = np.mean(ppg_chunks_mat, axis=0)
+    template_median = np.median(ppg_chunks_mat, axis=0)
+    zero_index = np.argmin(template_median)
+    return template_mean[:zero_index], template_median[:zero_index]
+
 
 if __name__ == "__main__":
 
-    save_wave_fig = True
+    save_wave_fig = False
+    save_chunk_fig = False
+    stat_template_ppg = False
 
     # all_mat_folder = "/gscratch/ubicomp/cm74/clinical_data/ProcessedDataNoVideo/*.mat"
-    # all_mat_folder = "/gscratch/ubicomp/xliu0/rppg_clinical_study/tscan_ppg/*.mat"
-    all_mat_folder = "/gscratch/ubicomp/xliu0/rppg_clinical_study/pos_ppg/*.mat"
-    bp_csv_path = "/gscratch/ubicomp/cm74/clinical_data/BPData_header.csv"
-    figure_savepath = "/gscratch/ubicomp/cm74/bp/bp_preprocess/pos_figure_plots"
+    all_mat_folder = "/gscratch/ubicomp/xliu0/data3/mnt/Datasets/UWMedicine/ProcessedDataNoVideo/*.mat"
+    # all_mat_folder = "/gscratch/ubicomp/xliu0/rppg_clinical_study/pos_ppg/*.mat"
+    bp_csv_path = "/gscratch/ubicomp/cm74/clinical_data/BPData_230103.csv"
+    figure_savepath = "/gscratch/ubicomp/cm74/bp/bp_preprocess/test_figure_plots_3"
+    chunk_mat_savepath = "/gscratch/ubicomp/cm74/bp/bp_preprocess/test_chunk_mat_tscan"
     all_mat_path = sorted(glob.glob(all_mat_folder))
     bp_df = pd.read_csv(bp_csv_path)
 
@@ -127,19 +147,18 @@ if __name__ == "__main__":
     count = 0
     for mat_path in all_mat_path:
         video_name = mat_path.split("/")[-1].split(".")[0]
-        
         mat_data = scipy.io.loadmat(mat_path)
         finger_ppg = 1 - mat_data["ppg"][0]
-        face_ppg =  mat_data["ppg_face"][0]
+        face_ppg = 1 - mat_data["ppg_face"][0]
 
         mat_pid = mat_path.split(".")[0].split("/")[-1][:-1]
         df_tmp = bp_df[bp_df["PID"]==mat_pid]
         bp_sys.append(df_tmp.iloc[0, 4])
         bp_dia.append(df_tmp.iloc[0, 8])
         hr.append(df_tmp.iloc[0, 12])
-        age.append(df_tmp.iloc[0, 13])
-        wgt.append(df_tmp.iloc[0, 14])
-        hgt.append(df_tmp.iloc[0, 15])
+        # age.append(df_tmp.iloc[0, 13])
+        # wgt.append(df_tmp.iloc[0, 14])
+        # hgt.append(df_tmp.iloc[0, 15])
 
         plt.figure()
         fig, axs = plt.subplots(6, 2, figsize=(60, 15), dpi=120)
@@ -163,7 +182,7 @@ if __name__ == "__main__":
         HPF = 2 # high cutoff frequency (Hz) - 2.0 Hz in reference
         FS = 60
         face_ppg_filt = filter_ppg_signal(face_ppg, LPF, HPF, FS)
-        HPF = 8 # high cutoff frequency (Hz) - 8.0 Hz in reference
+        HPF = 10 # high cutoff frequency (Hz) - 8.0 Hz in reference
         face_ppg_filt_8 = filter_ppg_signal(face_ppg, LPF, HPF, FS)
         
         axs[2, 1].plot(face_ppg_filt)
@@ -201,16 +220,38 @@ if __name__ == "__main__":
         ### Pulse Segmentation
         # tdia = 0
         tmp_features = list()
-
+        chunk_list = list()
+        #### No filtering in advance
+        face_ppg_filt_8 = face_ppg
         try:
             for peak_no in range(2, 50):
-                feature = pulse_segmentation(face_ppg_filt_8, peaks, peak_no, FS)
-                if not feature:
+                feature, ppg_chunk = pulse_segmentation(face_ppg_filt_8, peaks, peak_no, FS)
+                if len(feature) < 1:
                     continue
                 tmp_features.append(feature)
+                if save_chunk_fig:
+                    plt.figure()
+                    plt.plot(ppg_chunk)
+                    save_chunk_folder = os.path.join(chunk_mat_savepath, video_name)
+                    if not os.path.isdir(save_chunk_folder):
+                         os.makedirs(save_chunk_folder)
+                    plt.savefig(os.path.join(save_chunk_folder, str(peak_no) + ".png"))
+                chunk_list.append(ppg_chunk)
+                
+            if stat_template_ppg:
+                template_mean_chunk, template_median_chunk = stat_ppg_chunk(chunk_list)
+                plt.figure()
+                plt.plot(template_mean_chunk, label="mean")
+                plt.plot(template_median_chunk, label="medium")
+                save_chunk_folder = os.path.join(chunk_mat_savepath, video_name)
+                if not os.path.isdir(save_chunk_folder):
+                        os.makedirs(save_chunk_folder)
+                plt.savefig(os.path.join(save_chunk_folder, "template.png"))
+
             if save_wave_fig:
+                # plt.figure(1)
                 plt.savefig(os.path.join(figure_savepath, video_name + "_ppg_subplots.png"))
-            
+                # np.save(os.path.join(chunk_mat_savepath, video_name + ".npy"), np.array(chunk_list))
             all_features.append(np.median(tmp_features, axis=0))
 
         except IndexError:
@@ -240,14 +281,14 @@ if __name__ == "__main__":
         axs2[1, i] = calculate_plot_correlation(temp_feature[temp_index], bp_sys[temp_index], axs2[1, i], feature_names[i])
 
     
-    axs2[2, 0] = calculate_plot_correlation(age, bp_sys, axs2[2, 0], "AGE")
+    # axs2[2, 0] = calculate_plot_correlation(age, bp_sys, axs2[2, 0], "AGE")
 
-    axs2[2, 1] = calculate_plot_correlation(wgt, bp_sys, axs2[2, 1], "WEIGHT")
+    # axs2[2, 1] = calculate_plot_correlation(wgt, bp_sys, axs2[2, 1], "WEIGHT")
 
-    axs2[2, 2] = calculate_plot_correlation(hgt, bp_sys, axs2[2, 2], "HEIGHT")
+    # axs2[2, 2] = calculate_plot_correlation(hgt, bp_sys, axs2[2, 2], "HEIGHT")
 
     w_h = np.array(wgt) / np.array(hgt)
-    axs2[2, 3] = calculate_plot_correlation(w_h, bp_sys, axs2[2, 3], "WEIGHT / HEIGHT")
+    # axs2[2, 3] = calculate_plot_correlation(w_h, bp_sys, axs2[2, 3], "WEIGHT / HEIGHT")
 
     axs2[2, 4] = calculate_plot_correlation(hr, bp_sys, axs2[2, 4], "HR")
 
@@ -260,16 +301,16 @@ if __name__ == "__main__":
         temp_feature = all_features_normal[:,i]
         feature_index = np.argwhere(temp_feature!=0)
         temp_index = np.array(feature_index.flatten(), dtype=np.int8)
-        axs2[0, i] = calculate_plot_correlation(temp_feature[temp_index], bp_sys[temp_index],  axs2[3, i], feature_names[i])
+        axs2[3, i] = calculate_plot_correlation(temp_feature[temp_index], bp_dia[temp_index],  axs2[3, i], feature_names[i])
     
-    axs2[4, 0] = calculate_plot_correlation(age, bp_dia, axs2[4, 0], "AGE")
+    # axs2[4, 0] = calculate_plot_correlation(age, bp_dia, axs2[4, 0], "AGE")
 
-    axs2[4, 1] = calculate_plot_correlation(wgt, bp_dia, axs2[4, 1], "WEIGHT")
+    # axs2[4, 1] = calculate_plot_correlation(wgt, bp_dia, axs2[4, 1], "WEIGHT")
 
-    axs2[4, 2] = calculate_plot_correlation(hgt, bp_dia, axs2[4, 2], "HEIGHT")
+    # axs2[4, 2] = calculate_plot_correlation(hgt, bp_dia, axs2[4, 2], "HEIGHT")
 
     w_h = np.array(wgt) / np.array(hgt)
-    axs2[4, 3] = calculate_plot_correlation(w_h, bp_dia, axs2[4, 3], "WEIGHT / HEIGHT")
+    # axs2[4, 3] = calculate_plot_correlation(w_h, bp_dia, axs2[4, 3], "WEIGHT / HEIGHT")
 
     axs2[4, 4] = calculate_plot_correlation(hr, bp_dia, axs2[4, 4], "HR")
 
