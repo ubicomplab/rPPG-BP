@@ -110,6 +110,7 @@ if __name__ == "__main__":
     HPF = 16
     FS = 60
     threshold = 0.8
+    top_k = 20
     empty = dict()
     
     for i, row in df.iterrows():
@@ -139,7 +140,7 @@ if __name__ == "__main__":
             print("discard sessions: ", row["session"])
             continue
         interval = sorted(interval, key=lambda x: x[1], reverse=True)
-        top_k = 10
+        
         if len(interval) < top_k:
             for pos in interval:
                 chunks.append(mat_data[pos[0][0] : pos[0][1]])
